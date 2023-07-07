@@ -1,37 +1,54 @@
 const express = require('express')
 const app = express()
-const http = require('http')
+const https = require('https')
 const { Server } = require('socket.io')
 const cors = require('cors')
 const sql = require('mssql')
+const fs = require('fs');
 
 const config = {
-  user: 'MONETA_X_DB',
-  password: 'Montexa@321',
-  server: 'SG2NWPLS14SQL-v09.shr.prod.sin2.secureserver.net', 
-  database: 'MONETA_X_DB', 
-  synchronize: true,
-  trustServerCertificate: true,
-};
+    user: 'MONETA_X_DB',
+    password: 'Montexa@321',
+    server: 'SG2NWPLS14SQL-v09.shr.prod.sin2.secureserver.net', 
+    database: 'MONETA_X_DB', 
+    synchronize: true,
+    trustServerCertificate: true,
+  };
+  
+  async function connect(){
+    await sql.connect(config)
+  }
+  connect()
+  app.use(cors())
 
-async function connect(){
-  await sql.connect(config)
+//   app.use((req,res,next)=>{
+//     res.setHeader('Access-Control-Allow-Origin','*');
+//     res.setHeader('Access-Control-Allow-Methods','GET,POST,PUT,PATCH,DELETE');
+//     res.setHeader('Access-Control-Allow-Methods','Content-Type','Authorization');
+//     next(); 
+// })
+
+  // Specify the paths to your SSL certificate and private key files
+const sslOptions = {
+  key: fs.readFileSync('./certificates/private.key'),
+  cert: fs.readFileSync('./certificates/certificate.crt')
 }
-connect()
 
-app.use(cors())
-const server = http.createServer(app)
+const server = https.createServer(sslOptions, app);
 
 const io = new Server(server, {
   cors: {
-    origin: "https://monetaxexchange.com:3000",
+    origin: "https://trading-view-chart-sigma.vercel.app/",
     methods: ['GET', 'POST']
   }
-})
+});
 
 const clients = new Set();
 var cTs ;
 var subscribeCoin;
+app.get('/', function (req, res) {
+	res.send('Hello World');
+});
 app.get('/search', async function (req, res) {  
   fromDate = req.query.fromTs * 1000;
   //subscribeCoin = req.query.coin;
@@ -49,12 +66,11 @@ app.get('/search', async function (req, res) {
   var querySql = "Select (DATETOINT/1000) as 'time', CLOSEV as 'close', HIGHV as high," 
                 + " LOWV as low, OPENV as 'open', VOLUMEV as volume, 'force_direct' as conversionType,"
                 + " '' as conversionSymbol from COIN_RATE"
-                + " where DATETOINT >= "+ fromDate + " and DATETOINT < " + toTss
+                + " where DATETOINT >= "+ fromDate + 'and DATETOINT < ' + toTss
                 //+ " and COIN = " + subscribeCoin
                 //+ " where DATETOINT between "+ fromDate + " and " + toDate
                 + " order by DATETOINT ASC offset 0 rows fetch next "+limit+" rows only"; 
   // query to the database and get the records
-  console.log(querySql);
   const result = await sql.query(querySql)
   var suc = 'Error';
   var isFirstArr = false;
@@ -76,7 +92,7 @@ app.get('/search', async function (req, res) {
     "Data": result.recordset
   }
   //console.log(response)
-  res.send(response);
+  res.send(response);            
 });
 
 // Simulated live tracking data connect DB or fetch data from csv
@@ -158,67 +174,9 @@ io.on('connection', (socket) => {
 
 })
 
-server.listen(3001, () => {
-  console.log('server is running')
+server.listen(8000, () => {
+  console.log('https server is running')
 })
 
-
-// const HttpsServer = require('https');
-// const cors = require('cors');
-// const app = require('express')();
-// const fs = require("fs");
-
-// const server = HttpsServer.createServer({
-//     key: fs.readFileSync('pv_key.key'),
-//     cert: fs.readFileSync('server.crt')
-// }, app);
-
-// const io = require('socket.io')(server);
-
-// const clients = new Set();
-
-// // Simulated live tracking data connect DB or fetch data from csv
-// const generateTradingData = () => {
-//     return {
-//         "time": Date.now(),
-//         "close": Math.random() * 0.8,
-//         "high": Math.random() * 0.9,
-//         "low": Math.random() * 0.5,
-//         "open": Math.random() * 0.8,
-//         "volume": Math.random() * 0.8 + 10,
-//         "conversionType": "force_direct",
-//         "conversionSymbol": ""
-//     };
-// };
-
-// // Broadcast tracking data to all connected clients
-// const broadcastTrackingData = () => {
-//     const trackingData = generateTradingData();
-//     console.log('in broadcast');
-//     const message = JSON.stringify(trackingData);
-
-//     io.sockets.emit('m', { data: message });
-// };
-
-// // Send tracking data every second
-// // setInterval(broadcastTrackingData, 1000);
-
-// io.on('connection', (socket) => {
-//     clients.add(socket);
-
-//     socket.on('disconnect', () => {
-//         clients.delete(socket);
-//     });
-
-//     socket.on('fetch_data', (data) => {
-//         console.log('fetch data called')
-//         broadcastTrackingData()
-//         // setInterval(broadcastTrackingData, 1000); 
-//     })
-// });
-
-// app.use(cors());
-
-// server.listen(8080, () => console.log('Https running on port 8080'));
 
 
