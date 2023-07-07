@@ -21,7 +21,7 @@ async function connect(){
   await sql.connect(config)
 }
 connect()
-app.use(cors())
+app.use(cors({origin:'*'}))
 
 
   // Specify the paths to your SSL certificate and private key files
