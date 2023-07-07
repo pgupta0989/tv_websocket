@@ -1,6 +1,6 @@
 const express = require('express')
 const app = express()
-const https = require('https')
+const http = require('http')
 const { Server } = require('socket.io')
 const cors = require('cors')
 const sql = require('mssql')
@@ -30,7 +30,7 @@ app.use(cors())
   cert: fs.readFileSync('./certificates/certificate.crt')
 }*/
 
-const server = https.createServer(app);
+const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
