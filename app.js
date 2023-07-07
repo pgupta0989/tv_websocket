@@ -5,28 +5,24 @@ const { Server } = require('socket.io')
 const cors = require('cors')
 const sql = require('mssql')
 const fs = require('fs');
+require('dotenv').config();
+console.log(process.env.user);
 
 const config = {
-    user: 'MONETA_X_DB',
-    password: 'Montexa@321',
-    server: 'SG2NWPLS14SQL-v09.shr.prod.sin2.secureserver.net', 
-    database: 'MONETA_X_DB', 
+    user: process.env.user,
+    password: process.env.password,
+    server: process.env.server, 
+    database: process.env.database, 
     synchronize: true,
     trustServerCertificate: true,
   };
   
-  async function connect(){
-    await sql.connect(config)
-  }
-  connect()
-  app.use(cors())
+async function connect(){
+  await sql.connect(config)
+}
+connect()
+app.use(cors())
 
-//   app.use((req,res,next)=>{
-//     res.setHeader('Access-Control-Allow-Origin','*');
-//     res.setHeader('Access-Control-Allow-Methods','GET,POST,PUT,PATCH,DELETE');
-//     res.setHeader('Access-Control-Allow-Methods','Content-Type','Authorization');
-//     next(); 
-// })
 
   // Specify the paths to your SSL certificate and private key files
 const sslOptions = {
@@ -38,8 +34,9 @@ const server = https.createServer(sslOptions, app);
 
 const io = new Server(server, {
   cors: {
-    origin: "https://trading-view-chart-sigma.vercel.app/",
-    methods: ['GET', 'POST']
+    origin: '*',
+    methods: ['GET', 'POST'],
+    allowedHeaders: ['Content-Type']
   }
 });
 
@@ -49,7 +46,9 @@ var subscribeCoin;
 app.get('/', function (req, res) {
 	res.send('Hello World');
 });
-app.get('/search', async function (req, res) {  
+
+app.get('/search', async function (req, res) {
+  const timestamp = Date.now(); 
   fromDate = req.query.fromTs * 1000;
   //subscribeCoin = req.query.coin;
   const d = new Date(fromDate);
@@ -67,9 +66,10 @@ app.get('/search', async function (req, res) {
                 + " LOWV as low, OPENV as 'open', VOLUMEV as volume, 'force_direct' as conversionType,"
                 + " '' as conversionSymbol from COIN_RATE"
                 + " where DATETOINT >= "+ fromDate + 'and DATETOINT < ' + toTss
+                //+ " where DATETOINT < " + toTss 
                 //+ " and COIN = " + subscribeCoin
                 //+ " where DATETOINT between "+ fromDate + " and " + toDate
-                + " order by DATETOINT ASC offset 0 rows fetch next "+limit+" rows only"; 
+                + " order by DATETOINT ASC offset 0 rows fetch next 100 rows only"; 
   // query to the database and get the records
   const result = await sql.query(querySql)
   var suc = 'Error';
@@ -134,11 +134,11 @@ const generateTradingData = async (socket) => {
     return {
       "rawData" : "noData",
       "time": Date.now(),
-      "close": Math.random() * 1 + 1,
-      "high": Math.random() * 1.2,
-      "low": Math.random() * 5,
-      "open": Math.random() * 1.3 + 0.5,
-      "volume": Math.random() * 0.8 + 10,
+      "close": Math.random() * 1 + 0.4,
+      "high": Math.random() * 0.4,
+      "low": Math.random() * 0.4,
+      "open": Math.random()  + 0.5,
+      "volume": Math.random() * 0.8 + 0.4,
       "conversionType": "force_direct",
       "conversionSymbol": "noData"
     };  
@@ -166,9 +166,11 @@ io.on('connection', (socket) => {
 
   setInterval(async () => {
     await broadcastTrackingData(socket)
-  }, 3000)
+  }, 10000)
 
-  socket.on('disconnect', () => {
+  socket.on('disconnect', (err) => {
+      console.log('Got disconnected');
+      console.log(err);
       clients.delete(socket);
   });
 
@@ -177,6 +179,4 @@ io.on('connection', (socket) => {
 server.listen(8000, () => {
   console.log('https server is running')
 })
-
-
 
