@@ -25,12 +25,12 @@ app.use(cors())
 
 
   // Specify the paths to your SSL certificate and private key files
-const sslOptions = {
+/*const sslOptions = {
   key: fs.readFileSync('./certificates/private.key'),
   cert: fs.readFileSync('./certificates/certificate.crt')
-}
+}*/
 
-const server = https.createServer(sslOptions, app);
+const server = https.createServer(app);
 
 const io = new Server(server, {
   cors: {
